@@ -1,0 +1,60 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+    }
+}
+
+
+group 'com.github.redhatqe.polarizer.reporter'
+version '0.1.0-SNAPSHOT'
+sourceCompatibility = 1.8
+
+String jacksonVer = "2.9.2"
+
+plugins {
+    id "java"
+    id 'com.github.johnrengelman.shadow' version '2.0.1'
+    id "maven"
+    id "signing"
+}
+
+String projectURL = 'https://github.com/RedHatQE/polarize'
+String devURL = 'git@github.com:RedHatQE/polarize.git'
+String propFile = System.getProperty("user.home") + "/.polarize/polarize-project.properties"
+
+class Creds {
+    public String user
+    public String pw
+
+    Creds(String u, String p) {
+        this.user = u
+        this.pw = p
+    }
+}
+
+def getCreds(String polarizePropertyFile) {
+    File f = new File(polarizePropertyFile)
+    Properties props = new Properties()
+    props.load(f.newDataInputStream())
+    return new Creds(props.getProperty("ossrhUsername"), props.getProperty("ossrhPassword"))
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile 'org.testng:testng:6.8.21'
+    compile "com.fasterxml.jackson.core:jackson-core:${jacksonVer}"
+    compile "com.fasterxml.jackson.core:jackson-databind:${jacksonVer}"
+    compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: jacksonVer
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.8.2'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.8.2'
+    compile group: 'org.apache.activemq', name: 'activemq-all', version: '5.15.2'
+    compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.1'
+    compile 'com.github.redhatqe.polarize:polarize-meta:0.1.0'
+}
