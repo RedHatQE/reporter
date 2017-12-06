@@ -2,28 +2,23 @@ buildscript {
     repositories {
         jcenter()
     }
-    dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
-    }
 }
-
-
-group 'com.github.redhatqe.polarizer.reporter'
-version '0.1.0-SNAPSHOT'
-sourceCompatibility = 1.8
-
-String jacksonVer = "2.9.2"
 
 plugins {
     id "java"
     id 'com.github.johnrengelman.shadow' version '2.0.1'
     id "maven"
+    id "maven-publish"
     id "signing"
+    id "com.jfrog.bintray" version "1.7.3"
 }
 
-String projectURL = 'https://github.com/RedHatQE/polarize'
-String devURL = 'git@github.com:RedHatQE/polarize.git'
-String propFile = System.getProperty("user.home") + "/.polarize/polarize-project.properties"
+group 'com.github.redhatqe.polarizer.reporter'
+version '0.1.0'
+sourceCompatibility = 1.8
+
+String jacksonVer = "2.9.2"
+
 
 class Creds {
     public String user
@@ -42,8 +37,22 @@ def getCreds(String polarizePropertyFile) {
     return new Creds(props.getProperty("ossrhUsername"), props.getProperty("ossrhPassword"))
 }
 
+def getCreds(String polarizePropertyFile, String field1, String field2) {
+    File f = new File(polarizePropertyFile)
+    Properties props = new Properties()
+    props.load(f.newDataInputStream())
+    return new Creds(props.getProperty(field1), props.getProperty(field2))
+}
+
+String projectURL = 'https://github.com/RedHatQE/polarize'
+String devURL = 'git@github.com:RedHatQE/polarize.git'
+String propFile = System.getProperty("user.home") + "/.polarizer/polarizer-project.properties"
+Creds creds = getCreds(propFile)
+Creds creds2 = getCreds(propFile, "bintrayUser", "bintrayPassword")
+
+
 repositories {
-    mavenCentral()
+    jcenter()
 }
 
 dependencies {
@@ -57,4 +66,98 @@ dependencies {
     compile group: 'org.apache.activemq', name: 'activemq-all', version: '5.15.2'
     compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.1'
     compile 'com.github.redhatqe.polarize:polarize-meta:0.1.0'
+}
+
+// Had to add the -quiet option when creating the javadocs for Java 8, or creation will fail
+// Generates javadocs
+task myJavadocs(type: Javadoc) {
+    source = sourceSets.main.allJava
+    options.addStringOption('Xdoclint:none', '-quiet')
+    classpath += sourceSets.test.compileClasspath
+}
+
+// Generates the javadoc jar
+task javadocJar (type: Jar, dependsOn: myJavadocs) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+// Generates the polarize jar
+task sourceJar(type: Jar) {
+    from sourceSets.main.allJava
+    classifier "sources"
+}
+
+artifacts {
+    archives jar, sourceJar, javadocJar, shadowJar
+}
+
+
+bintray {
+    user = creds2.user
+    key = creds2.pw
+    pkg {
+        repo = 'reporter'
+        name = 'reporter'
+        licenses = ['Apache-2.0']
+        vcsUrl = 'https://github.com/rarebreed/reporter.git'
+        version {
+            name = "${version}"
+            desc = 'Data definitions for xunit and testcase for polarize.  TestNG Reporter'
+            released  = new Date()
+            gpg {
+                sign = true //Determines whether to GPG sign the files. The default is false
+            }
+            mavenCentralSync {
+                sync = false //[Default: true] Determines whether to sync the version to Maven Central.
+                user =  "${creds.user}" //OSS user token: mandatory
+                password = "${creds.pw}" //OSS user password: mandatory
+                close = '1' //Optional property. By default the staging repository is closed and artifacts are released to Maven Central. You can optionally turn this behaviour off (by puting 0 as value) and release the version manually.
+            }
+        }
+    }
+    publications = ['MyPublication']
+}
+
+// Create the pom configuration:
+def pomConfig = {
+    licenses {
+        license {
+            name "The Apache Software License, Version 2.0"
+            url "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+    }
+    developers {
+        developer {
+            id "stoner"
+            name "Sean Toner"
+            email "stoner@redhat.com"
+        }
+    }
+
+    scm {
+        connection "scm:git:${projectURL}.git"
+        developerConnection "scm:git:${devURL}"
+        url "${projectURL}"
+    }
+}
+
+publishing {
+    publications {
+        MyPublication(MavenPublication) {
+            from components.java
+            artifact sourceJar
+            artifact javadocJar
+            groupId 'com.github.redhatqe.polarizer'
+            artifactId 'reporter'
+            version "${version}"
+            pom.withXml {
+                def root = asNode()
+                root.appendNode('description', 'JAXB classes for xunit and testcases, TestNG reporter')
+                root.appendNode('name', 'reporter')
+                root.appendNode('url', "${projectURL}")
+                root.children().last() + pomConfig
+            }
+        }
+    }
 }
