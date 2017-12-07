@@ -126,7 +126,7 @@ public class Testcase {
      */
     public List<Error> getError() {
         if (error == null) {
-            error = new ArrayList<Error>();
+            error = new ArrayList<>();
         }
         return this.error;
     }
