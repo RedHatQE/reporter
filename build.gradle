@@ -13,7 +13,7 @@ plugins {
     id "com.jfrog.bintray" version "1.7.3"
 }
 
-group 'com.github.redhatqe.polarizer.reporter'
+group 'com.github.redhatqe.polarizer'
 version '0.1.0'
 sourceCompatibility = 1.8
 
@@ -44,8 +44,8 @@ def getCreds(String polarizePropertyFile, String field1, String field2) {
     return new Creds(props.getProperty(field1), props.getProperty(field2))
 }
 
-String projectURL = 'https://github.com/RedHatQE/polarize'
-String devURL = 'git@github.com:RedHatQE/polarize.git'
+String projectURL = 'https://github.com/rarebreed/reporter'
+String devURL = 'git@github.com:rarebreed/reporter.git'
 String propFile = System.getProperty("user.home") + "/.polarizer/polarizer-project.properties"
 Creds creds = getCreds(propFile)
 Creds creds2 = getCreds(propFile, "bintrayUser", "bintrayPassword")
@@ -96,6 +96,7 @@ artifacts {
 bintray {
     user = creds2.user
     key = creds2.pw
+    override = true
     pkg {
         repo = 'reporter'
         name = 'reporter'
@@ -109,7 +110,7 @@ bintray {
                 sign = true //Determines whether to GPG sign the files. The default is false
             }
             mavenCentralSync {
-                sync = false //[Default: true] Determines whether to sync the version to Maven Central.
+                sync = true //[Default: true] Determines whether to sync the version to Maven Central.
                 user =  "${creds.user}" //OSS user token: mandatory
                 password = "${creds.pw}" //OSS user password: mandatory
                 close = '1' //Optional property. By default the staging repository is closed and artifacts are released to Maven Central. You can optionally turn this behaviour off (by puting 0 as value) and release the version manually.
