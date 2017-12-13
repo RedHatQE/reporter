@@ -14,7 +14,7 @@ plugins {
 }
 
 group 'com.github.redhatqe.polarizer'
-version '0.2.0'
+version '0.2.0-SNAPSHOT'
 sourceCompatibility = 1.8
 
 String jacksonVer = "2.9.2"
@@ -97,6 +97,7 @@ bintray {
     user = creds2.user
     key = creds2.pw
     override = true
+    publish = true
     pkg {
         repo = 'reporter'
         name = 'reporter'

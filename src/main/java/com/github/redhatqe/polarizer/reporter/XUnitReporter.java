@@ -1,9 +1,9 @@
 package com.github.redhatqe.polarizer.reporter;
 
 import com.github.redhatqe.polarizer.reporter.configuration.Serializer;
+import com.github.redhatqe.polarizer.reporter.configuration.XUnitInfo;
 import com.github.redhatqe.polarizer.reporter.configuration.data.XUnitConfig;
 import com.github.redhatqe.polarizer.reporter.exceptions.*;
-import com.github.redhatqe.polarizer.reporter.importer.exceptions.*;
 import com.github.redhatqe.polarizer.reporter.jaxb.IJAXBHelper;
 import com.github.redhatqe.polarizer.reporter.jaxb.JAXBHelper;
 import com.github.redhatqe.polarizer.reporter.jaxb.JAXBReporter;
@@ -24,10 +24,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.Properties;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import static com.github.redhatqe.polarizer.reporter.configuration.Serializer.from;
 
 
 /**
@@ -73,8 +73,42 @@ public class XUnitReporter implements IReporter {
         else
             cfgFile = new File(configPath);
 
-        if (!cfgFile.exists())
-            throw new NoConfigFoundError(String.format("Could not config file %s", configPath));
+        if (!cfgFile.exists()) {
+            logger.warn("Using a dummy default config file");
+            //throw new NoConfigFoundError(String.format("Could not config file %s", configPath));
+            InputStream is = XUnitReporter.class.getClassLoader().getResourceAsStream("dummy-polarizer-xunit.yml");
+            File tmp = FileHelper.makeTempFile("/tmp", "dummy-config", ".yml", "rw-rw----");
+            FileOutputStream os = null;
+            try {
+                os = new FileOutputStream(tmp);
+                int r = 0;
+                byte[] buffer = new byte[1024];
+                while ((r = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, r);
+                }
+            } catch (FileNotFoundException e) {
+                logger.error("Could not find config file");
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                if (is != null) {
+                    try {
+                        is.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (os != null) {
+                    try {
+                        os.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            cfgFile = tmp;
+        }
 
         try {
             config = Serializer.from(XUnitConfig.class, cfgFile);
@@ -151,10 +185,12 @@ public class XUnitReporter implements IReporter {
      * Creates an xunit file compatible with the Polarion xunit importer service
      *
      * @param cfg contains arguments needed to convert xunit to polarion compatible xunit
-     * @param xunit a "standard" xunit xml file
      * @return a new File that is compatible
      */
-    public Optional<File> createPolarionXunit(XUnitConfig cfg, File xunit) {
+    public static Optional<File> createPolarionXunit(XUnitConfig cfg) {
+        File xunit = new File(cfg.getCurrentXUnit());
+        File newXunit = FileHelper.makeTempFile("/tmp", "polarion-xunit-", ".xml", "rw-rw----");
+
         Map<String, Map<String, IdParams>> mapping = FileHelper.loadMapping(new File(cfg.getMapping()));
         String project = cfg.getProject();
         Function<String, IdParams> fn = (qual) -> {
@@ -171,25 +207,124 @@ public class XUnitReporter implements IReporter {
 
         JAXBHelper jaxb = new JAXBHelper();
         Optional<Testsuites> maybeSuites;
+        Optional<Testsuite> maybeSuite;
+        Testsuite suite;
         maybeSuites = XUnitReporter.getTestSuitesFromXML(xunit);
 
+        Consumer<Testcase> tcHdlr = tc -> {
+            // Add the properties here
+            String qual = String.format("%s.%s", tc.getClassname(), tc.getName());
+            IdParams param = fn.apply(qual);
+            com.github.redhatqe.polarizer.reporter.importer.xunit.Properties props =
+                    tc.getProperties();
+            if (props == null) {
+                props = new com.github.redhatqe.polarizer.reporter.importer.xunit.Properties();
+                tc.setProperties(props);
+            }
+            Property prop = new Property();
+            prop.setName("polarion-testcase-id");
+            prop.setValue(param.id);
+            param.getParameters().forEach(p -> {
+                Property tp = new Property();
+                tp.setName(String.format("polarion-parameter-%s", p));
+                tp.setValue("");
+            });
+            // mapping file wins
+            List<Property> curr = props.getProperty();
+            curr.clear();
+            curr.add(prop);
+        };
+
         if (!maybeSuites.isPresent())
-            throw new XMLUnmarshallError("Could not unmarshall the xunit file");
+            throw new XMLUnmarshallError(String.format("Could not unmarshall %s", xunit));
         Testsuites suites = maybeSuites.get();
-        suites.getTestsuite()
-                .forEach(ts -> ts.getTestcase().forEach(tc -> {
-                        // Add the properties here
-                        String qual = String.format("%s.%s", tc.getClassname(), tc.getName());
-                        IdParams param = fn.apply(qual);
-                        com.github.redhatqe.polarizer.reporter.importer.xunit.Properties props = tc.getProperties();
-                        Property prop = new Property();
+        if (suites.getTestsuite().size() == 0) {
+            maybeSuite = XUnitReporter.getTestSuiteFromXML(xunit);
+            if (!maybeSuite.isPresent())
+                throw new XMLUnmarshallError(String.format("Could not unmarshall %s as a TestSuite.class", xunit));
+            suite = maybeSuite.get();
+            suite.getTestcase().forEach(tcHdlr);
+            suites.getTestsuite().clear();
+            suites.getTestsuite().add(suite);
+        }
+        else {
+            suites.getTestsuite()
+                    .forEach(ts -> ts.getTestcase().forEach(tcHdlr));
+        }
 
-                    })
-                );
+        com.github.redhatqe.polarizer.reporter.importer.xunit.Properties tsProps = suites.getProperties();
+        if (tsProps == null) {
+            tsProps = new com.github.redhatqe.polarizer.reporter.importer.xunit.Properties();
+            suites.setProperties(tsProps);
+        }
+        List<Property> sProps = suites.getProperties().getProperty();
+        XUnitReporter.setPropsFromConfig(cfg, sProps);
+        IJAXBHelper.marshaller(suites, newXunit, jaxb.getXSDFromResource(Testsuites.class));
+        cfg.setNewXunit(newXunit.toString());
 
-        return Optional.empty();
+        return Optional.of(newXunit);
     }
 
+    public static void setPropsFromConfig(XUnitConfig cfg, List<Property> props) {
+        props.clear();
+        XUnitInfo info = cfg.getXunit();
+
+        BiFunction<String, Map<String, String>, List<Property>> fn = (s, m) -> m.entrySet()
+                .stream()
+                .map(es -> {
+                    Property prop = new Property();
+                    prop.setName("polarion-custom-" + es.getKey());
+                    prop.setValue(es.getValue());
+                    return prop;
+                })
+                .collect(Collectors.toList());
+
+        List<Property> custProps = fn.apply("polarion-", info.getCustom().getProperties());
+
+        List<Property> tsProps = info.getCustom().getTestSuite().entrySet()
+                .stream()
+                .map(es -> {
+                    Property prop = new Property();
+                    prop.setName("polarion-" + es.getKey());
+                    prop.setValue(es.getValue().toString());
+                    return prop;
+                })
+                .collect(Collectors.toList());
+
+        // Miscellaneous
+        Property idprop = new Property();
+        idprop.setName("polarion-testrun-id");
+        idprop.setValue(info.getTestrun().getId());
+        props.add(idprop);
+
+        Property tempprop = new Property();
+        tempprop.setName("polarion-testrun-template-id");
+        tempprop.setValue(info.getTestrun().getTemplateId());
+        props.add(tempprop);
+
+        Property titleprop = new Property();
+        titleprop.setName("polarion-testrun-title");
+        titleprop.setValue(info.getTestrun().getTitle());
+        props.add(titleprop);
+
+        Property projprop = new Property();
+        projprop.setName("polarion-project-id");
+        projprop.setValue(cfg.getProject());
+        props.add(projprop);
+
+        Property selector = new Property();
+        selector.setName(String.format("polarion-response-%s", info.getSelector().getName()));
+        selector.setValue(info.getSelector().getValue());
+        props.add(selector);
+
+        Property userprop = new Property();
+        userprop.setName("polarion-user-id");
+        userprop.setValue(cfg.getServers().get("polarion").getUser());
+        props.add(userprop);
+
+        props.addAll(custProps);
+        props.addAll(tsProps);
+    }
 
     /**
      * Generates a modified xunit result that can be used for the XUnit Importer
@@ -656,6 +791,18 @@ public class XUnitReporter implements IReporter {
         return Optional.of(suites);
     }
 
+    private static Optional<Testsuite>
+    getTestSuiteFromXML(File xmlDesc) {
+        JAXBReporter jaxb = new JAXBReporter();
+        Optional<Testsuite> ts;
+        ts = IJAXBHelper.unmarshaller(Testsuite.class, xmlDesc,
+                jaxb.getXSDFromResource(Testsuite.class));
+        if (!ts.isPresent())
+            return Optional.empty();
+        Testsuite suites = ts.get();
+        return Optional.of(suites);
+    }
+
     private static String checkSelector(String selector) {
         // Make sure selector is in proper format
         if (!selector.contains("'")) {
@@ -668,5 +815,12 @@ public class XUnitReporter implements IReporter {
             logger.info("Modified selector to " + selector);
         }
         return selector;
+    }
+
+    public static void main(String[] args) throws IOException {
+        String xargs = args[0];
+        XUnitConfig cfg = Serializer.from(XUnitConfig.class, new File(xargs));
+        cfg.setCurrentXUnit(args[1]);
+        Optional<File> maybeNew = XUnitReporter.createPolarionXunit(cfg);
     }
 }

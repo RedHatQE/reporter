@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.redhatqe.polarizer.reporter.configuration.ServerInfo;
 import com.github.redhatqe.polarizer.reporter.configuration.TestCaseInfo;
+import com.github.redhatqe.polarizer.reporter.configuration.api.IComplete;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -13,7 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class TestCaseConfig extends BaseConfig {
+public class TestCaseConfig extends BaseConfig implements IComplete<String> {
     // =========================================================================
     // 1. Add all properties for your class/configuration
     // =========================================================================
@@ -125,5 +126,20 @@ public class TestCaseConfig extends BaseConfig {
 
     public static String getDefaultConfigPath() {
         return Paths.get(System.getProperty("user.home"), configBasePath, defaultConfigFileName).toString();
+    }
+
+    @Override
+    public Integer completed() {
+        return completed.size();
+    }
+
+    @Override
+    public void addToComplete(String s) {
+        this.completed.add(s);
+    }
+
+    @Override
+    public List<String> getCompleted() {
+        return this.completed;
     }
 }
