@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
  */
 public class XUnitReporter implements IReporter {
     private final static Logger logger = LogManager.getLogger(XUnitReporter.class);
-    public static String configPath = System.getProperty("polarize.config");
+    public static String configPath;
     public static File cfgFile = null;
     private static XUnitConfig config;
     private final static File defaultPropertyFile =
@@ -65,13 +65,17 @@ public class XUnitReporter implements IReporter {
     public static XUnitConfig getConfig(String path) {
         if (path != null) {
             cfgFile = new File(path);
+            configPath = path;
         }
-        else if (configPath == null) {
+        else if (System.getProperty("polarize.config") != null) {
+            configPath = System.getProperty("polarize.property");
+            cfgFile = new File(configPath);
+        }
+        else {
             Path phome = Paths.get(System.getProperty("user.home"), ".polarizer", "polarizer-xunit.yml");
             cfgFile = new File(phome.toString());
+            configPath = phome.toString();
         }
-        else
-            cfgFile = new File(configPath);
 
         if (!cfgFile.exists()) {
             logger.warn("Using a dummy default config file");
@@ -337,7 +341,8 @@ public class XUnitReporter implements IReporter {
      */
     @Override
     public void generateReport(List<XmlSuite> xmlSuites, List<ISuite> suites, String outputDirectory) {
-        XUnitConfig config = XUnitReporter.getConfig(null);
+        String p = System.getProperty("polarize.config");
+        XUnitConfig config = XUnitReporter.getConfig(p);
         Testsuites tsuites = XUnitReporter.initTestSuiteInfo(config.getXunit().getSelector().getName());
         List<Testsuite> tsuite = tsuites.getTestsuite();
 
