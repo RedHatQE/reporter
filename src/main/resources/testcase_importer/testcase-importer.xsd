@@ -44,9 +44,9 @@
     </xs:complexType>
   </xs:element>
   <xs:element name="test-step-column">
-    <xs:complexType mixed="true">
-	  <xs:sequence minOccurs="0" maxOccurs="unbounded">
-		<xs:element ref="parameter" />
+    <xs:complexType>
+	  <xs:sequence>
+		<xs:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
       <xs:attribute name="id" use="required"/>
     </xs:complexType>
