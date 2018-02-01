@@ -75,6 +75,8 @@ public class XUnitInfo extends ImporterInfo {
         private String groupId;
         @JsonProperty(value="type")
         private String type;
+        @JsonProperty(value="status-id")
+        private String status;
 
         public Testrun() {
 
@@ -129,6 +131,14 @@ public class XUnitInfo extends ImporterInfo {
             if (!allowed_.contains(type))
                 throw new InvalidArgumentError("Testrun type must be one of " + String.join(",", allowed));
             this.type = type;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public void setStatus(String status) {
+            this.status = status;
         }
     }
 

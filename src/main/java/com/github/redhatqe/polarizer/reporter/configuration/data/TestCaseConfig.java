@@ -24,13 +24,12 @@ public class TestCaseConfig extends BaseConfig implements IComplete<String> {
     private String author;
     @JsonProperty
     private List<String> packages;
-
+    @JsonProperty
+    private String mapping;
 
     // ==========================================================================
     // 2. Add all fields not belonging to the configuration here
     // ==========================================================================
-    @JsonIgnore
-    private String mapping;
     @JsonIgnore
     public static Logger logger = LogManager.getLogger("XUnitConfig");
     @JsonIgnore
@@ -41,6 +40,10 @@ public class TestCaseConfig extends BaseConfig implements IComplete<String> {
     public static final String defaultConfigFileName = "polarizer-testcase.yml";
     @JsonIgnore
     public List<String> completed;
+    @JsonIgnore
+    private String currentTCXml;
+    @JsonIgnore
+    private String newTCXml;
 
     // =========================================================================
     // 3. Constructors go here.  Remember that there must be a no-arg constructor
@@ -126,6 +129,22 @@ public class TestCaseConfig extends BaseConfig implements IComplete<String> {
 
     public static String getDefaultConfigPath() {
         return Paths.get(System.getProperty("user.home"), configBasePath, defaultConfigFileName).toString();
+    }
+
+    public String getCurrentTCXml() {
+        return currentTCXml;
+    }
+
+    public void setCurrentTCXml(String currentTCXml) {
+        this.currentTCXml = currentTCXml;
+    }
+
+    public String getNewTCXml() {
+        return newTCXml;
+    }
+
+    public void setNewTCXml(String newTCXml) {
+        this.newTCXml = newTCXml;
     }
 
     @Override
