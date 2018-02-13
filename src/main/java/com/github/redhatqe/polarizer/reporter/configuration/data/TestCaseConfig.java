@@ -26,6 +26,12 @@ public class TestCaseConfig extends BaseConfig implements IComplete<String> {
     private List<String> packages;
     @JsonProperty
     private String mapping;
+    @JsonProperty(value="new-testcase-xml")
+    private String newTCXml;
+    @JsonProperty
+    private List<String> updates;  // qualified methods to be updated
+    @JsonProperty(value="definitions-path")
+    private String definitionsPath;
 
     // ==========================================================================
     // 2. Add all fields not belonging to the configuration here
@@ -42,8 +48,7 @@ public class TestCaseConfig extends BaseConfig implements IComplete<String> {
     public List<String> completed;
     @JsonIgnore
     private String currentTCXml;
-    @JsonIgnore
-    private String newTCXml;
+
 
     // =========================================================================
     // 3. Constructors go here.  Remember that there must be a no-arg constructor
@@ -145,6 +150,22 @@ public class TestCaseConfig extends BaseConfig implements IComplete<String> {
 
     public void setNewTCXml(String newTCXml) {
         this.newTCXml = newTCXml;
+    }
+
+    public List<String> getUpdates() {
+        return updates;
+    }
+
+    public void setUpdates(List<String> updates) {
+        this.updates = updates;
+    }
+
+    public String getDefinitionsPath() {
+        return definitionsPath;
+    }
+
+    public void setDefinitionsPath(String definitionsPath) {
+        this.definitionsPath = definitionsPath;
     }
 
     @Override
