@@ -4,11 +4,13 @@ package com.github.redhatqe.polarizer.reporter.configuration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class ServerInfo {
-    @JsonProperty
+    @JsonProperty(required = true)
     private String url;
     @JsonProperty
+    private String domain;
+    @JsonProperty(required = true)
     private String user;
-    @JsonProperty
+    @JsonProperty(required = true)
     private String password;
 
     public String getUrl() {
@@ -33,6 +35,14 @@ public class ServerInfo {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getDomain() {
+        return domain;
+    }
+
+    public void setDomain(String domain) {
+        this.domain = domain;
     }
 
     public ServerInfo() {

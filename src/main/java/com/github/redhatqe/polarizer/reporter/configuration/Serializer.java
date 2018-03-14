@@ -16,6 +16,12 @@ public class Serializer {
         writer.writeValue(new File(path), cfg);
     }
 
+    public static <T> String toJson(T cfg) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectWriter writer = mapper.writer().withDefaultPrettyPrinter();
+        return writer.writeValueAsString(cfg);
+    }
+
     public static <T> T fromJson(Class<T> cfg, File json) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         return mapper.readValue(json, cfg);
