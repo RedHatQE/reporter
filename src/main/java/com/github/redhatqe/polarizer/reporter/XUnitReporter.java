@@ -27,7 +27,10 @@ import java.util.Properties;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 
 /**
@@ -50,8 +53,13 @@ public class XUnitReporter implements IReporter {
     public final static String templateId = "polarion-testrun-template-id";
     public final static String testrunId = "polarion-testrun-id";
     public final static String testrunTitle = "polarion-testrun-title";
+    public final static String testrunType = "polarion-testrun-type-id";
     public final static String polarionCustom = "polarion-custom";
     public final static String polarionResponse = "polarion-response";
+    public final static String polarionGroupId = "polarion-group-id";
+    public final static String polarionProjectId = "polarion-project-id";
+    public final static String polarionUserId = "polarion-user-id";
+
     private File bad = new File("/tmp/bad-tests.txt");
 
     public static void setXUnitConfig(String path) throws IOException {
@@ -68,7 +76,7 @@ public class XUnitReporter implements IReporter {
             configPath = path;
         }
         else if (System.getProperty("polarize.config") != null) {
-            configPath = System.getProperty("polarize.property");
+            configPath = System.getProperty("polarize.config");
             cfgFile = new File(configPath);
         }
         else {
@@ -112,6 +120,9 @@ public class XUnitReporter implements IReporter {
                 }
             }
             cfgFile = tmp;
+        }
+        else {
+            logger.info(String.format("Using %s for the xunit reporting config file", cfgFile.toString()));
         }
 
         try {
@@ -235,8 +246,18 @@ public class XUnitReporter implements IReporter {
             });
             // mapping file wins
             List<Property> curr = props.getProperty();
-            curr.clear();
-            curr.add(prop);
+            Boolean noTestCaseId = curr.stream().noneMatch(p -> p.getName().equals(prop.getName()));
+            if (noTestCaseId)
+                curr.add(prop);
+            else {
+                IntStream.range(0, curr.size())
+                    .map(i -> curr.get(i).getName().equals(prop.getName()) ? i : -1)
+                    .filter(x -> x != -1)
+                    .forEach(e -> {
+                        logger.info(String.format("Using mapping.json TestCase ID value of %s", prop.getValue()));
+                        curr.set(e, prop);
+                    });
+            }
         };
 
         if (!maybeSuites.isPresent())
@@ -269,65 +290,91 @@ public class XUnitReporter implements IReporter {
         return Optional.of(newXunit);
     }
 
+    /**
+     * Replaces or adds a Property to the props list
+     *
+     * @param props
+     * @param prop
+     */
+    private static void setProp(List<Property> props, Property prop) {
+        props.stream()
+            .map(p -> new Tuple<>(p.getName(), p))
+            .filter(p -> p.first.equals(prop.getName()))
+            .filter(p -> !p.second.getValue().equals(prop.getValue()))
+            .forEach(p -> {
+                String oVal = p.second.getValue();
+                logger.info(String.format("Overwriting original value %s to %s for %s", oVal, prop.getValue(), p.first));
+                p.second.setValue(prop.getValue());
+            });
+    }
+
+    private static void addProp(List<Property> props, Property prop) {
+        Boolean matched = props.stream()
+            .map(p -> new Tuple<>(p.getName(), p))
+            .anyMatch(p -> p.first.equals(prop.getName()));
+        if (!matched) {
+            logger.info(String.format("Adding %s = %s to Property list", prop.getName(), prop.getValue()));
+            props.add(prop);
+        }
+    }
+
     public static void setPropsFromConfig(XUnitConfig cfg, List<Property> props) {
-        props.clear();
+        //props.clear();
+        Set<String> propSet = props.stream().map(Property::getName).collect(Collectors.toSet());
         XUnitInfo info = cfg.getXunit();
 
-        BiFunction<String, Map<String, String>, List<Property>> fn = (s, m) -> m.entrySet()
-                .stream()
-                .map(es -> {
-                    Property prop = new Property();
-                    prop.setName("polarion-custom-" + es.getKey());
-                    prop.setValue(es.getValue());
-                    return prop;
-                })
-                .collect(Collectors.toList());
+        BiFunction<String, Map<String, String>, List<Property>> fn = (s, m) -> m.entrySet().stream()
+            .filter(e -> !propSet.contains(e.getKey()))
+            .map(es -> {
+                Property prop = new Property();
+                prop.setName(s + es.getKey());
+                prop.setValue(es.getValue());
+                return prop;
+            })
+            .collect(Collectors.toList());
 
-        List<Property> custProps = fn.apply("polarion-", info.getCustom().getProperties());
+        List<Property> custProps = fn.apply("polarion-custom-", info.getCustom().getProperties());
+        // Overwrite existing Properties
+        custProps.forEach(cp -> XUnitReporter.setProp(props, cp));
+        // If Property does not exist in list, add it
+        custProps.forEach(cp -> XUnitReporter.addProp(props, cp));
 
-        List<Property> tsProps = info.getCustom().getTestSuite().entrySet()
-                .stream()
-                .map(es -> {
-                    Property prop = new Property();
-                    prop.setName("polarion-" + es.getKey());
-                    prop.setValue(es.getValue().toString());
-                    return prop;
-                })
-                .collect(Collectors.toList());
+        List<Property> tsProps = info.getCustom().getTestSuite().entrySet().stream()
+            .map((Map.Entry<String, Boolean> es) -> {
+                Property prop = new Property();
+                prop.setName("polarion-" + es.getKey());
+                prop.setValue(es.getValue().toString());
+                return prop;
+            })
+            .collect(Collectors.toList());
+
+        BiFunction<String, Supplier<String>, Property> con = (s, fun) -> {
+            Property prop = new Property();
+            prop.setName(s);
+            prop.setValue(fun.get());
+            return prop;
+        };
 
         // Miscellaneous
-        Property idprop = new Property();
-        idprop.setName("polarion-testrun-id");
-        idprop.setValue(info.getTestrun().getId());
-        props.add(idprop);
+        List<Tuple<String, Supplier<String>>> zip = new ArrayList<>();
+        zip.add(new Tuple<>(XUnitReporter.testrunId, () -> info.getTestrun().getId()));
+        zip.add(new Tuple<>(XUnitReporter.templateId, () -> info.getTestrun().getTemplateId()));
+        zip.add(new Tuple<>(XUnitReporter.testrunTitle, () -> info.getTestrun().getTitle()));
+        zip.add(new Tuple<>(XUnitReporter.testrunType, () -> info.getTestrun().getType()));
+        zip.add(new Tuple<>(XUnitReporter.polarionGroupId, () -> info.getTestrun().getGroupId()));
+        zip.add(new Tuple<>(XUnitReporter.polarionProjectId, cfg::getProject));
+        String polResp = String.format("polarion-response-%s", info.getSelector().getName());
+        zip.add(new Tuple<>(polResp, () -> info.getSelector().getValue()));
+        zip.add(new Tuple<>(XUnitReporter.polarionUserId, () -> cfg.getServers().get("polarion").getUser()));
 
-        Property tempprop = new Property();
-        tempprop.setName("polarion-testrun-template-id");
-        tempprop.setValue(info.getTestrun().getTemplateId());
-        props.add(tempprop);
+        List<Property> miscProps = zip.stream()
+            .map(t -> con.apply(t.first, t.second))
+            .collect(Collectors.toList());
 
-        Property titleprop = new Property();
-        titleprop.setName("polarion-testrun-title");
-        titleprop.setValue(info.getTestrun().getTitle());
-        props.add(titleprop);
-
-        Property projprop = new Property();
-        projprop.setName("polarion-project-id");
-        projprop.setValue(cfg.getProject());
-        props.add(projprop);
-
-        Property selector = new Property();
-        selector.setName(String.format("polarion-response-%s", info.getSelector().getName()));
-        selector.setValue(info.getSelector().getValue());
-        props.add(selector);
-
-        Property userprop = new Property();
-        userprop.setName("polarion-user-id");
-        userprop.setValue(cfg.getServers().get("polarion").getUser());
-        props.add(userprop);
-
-        props.addAll(custProps);
-        props.addAll(tsProps);
+        miscProps.forEach(mp -> {
+            XUnitReporter.setProp(props, mp);
+            XUnitReporter.addProp(props, mp);
+        });
     }
 
     /**
@@ -713,6 +760,15 @@ public class XUnitReporter implements IReporter {
         prop.setName(name);
 
         switch(name) {
+            case XUnitReporter.testrunType:
+                cfg = () -> {
+                    String trTypeId = config.getXunit().getTestrun().getType();
+                    if (trTypeId.equals(""))
+                        return;
+                    prop.setValue(trTypeId);
+                    properties.add(prop);
+                };
+                break;
             case XUnitReporter.templateId:
                 cfg = () -> {
                     String tempId = config.getXunit().getTestrun().getTemplateId();

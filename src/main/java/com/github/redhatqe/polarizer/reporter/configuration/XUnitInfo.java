@@ -73,7 +73,7 @@ public class XUnitInfo extends ImporterInfo {
         private String templateId;
         @JsonProperty(value="group-id")
         private String groupId;
-        @JsonProperty(value="type")
+        @JsonProperty(value="testrun-type")
         private String type;
         @JsonProperty(value="status-id")
         private String status;
@@ -125,7 +125,7 @@ public class XUnitInfo extends ImporterInfo {
         }
 
         public void setType(String type) {
-            String[] allowed = {"regression", "buildacceptance", "featureacceptance"};
+            String[] allowed = {"regression", "buildacceptance", "featureverification"};
             List<String> check = Arrays.asList(allowed);
             Set<String> allowed_ = new HashSet<>(check);
             if (!allowed_.contains(type))
