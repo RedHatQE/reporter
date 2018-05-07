@@ -62,7 +62,7 @@ dependencies {
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.8.2'
     compile group: 'org.apache.activemq', name: 'activemq-all', version: '5.15.2'
     compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.1'
-    compile 'com.github.redhatqe.polarize:polarize-meta:0.1.0'
+    compile 'com.github.redhatqe.polarize:polarize-meta:0.1.0-SNAPSHOT'
 }
 
 task wrapper(type: Wrapper) {
@@ -200,4 +200,48 @@ artifactory {
             maven = true
         }
     }
+}
+
+uploadArchives {
+  repositories {
+    mavenDeployer {
+      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+        authentication(userName: creds.user, password: creds.pw)
+      }
+
+      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+        authentication(userName: creds.user, password: creds.pw)
+      }
+
+      pom.project {
+        name project.name
+        packaging 'jar'
+        description 'Library to help with configuration'
+        url projectURL
+
+        scm {
+          connection "scm:git:${projectURL}.git"
+          developerConnection "scm:git:${devURL}"
+          url projectURL
+        }
+
+        licenses {
+          license {
+            name 'The Apache License, Version 2.0'
+            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+          }
+        }
+
+        developers {
+          developer {
+            id 'stoner'
+            name 'Sean Toner'
+            email 'stoner@redhat.com'
+          }
+        }
+      }
+    }
+  }
 }

@@ -49,15 +49,17 @@ public class ServerInfo {
 
     }
 
-    public ServerInfo(String url, String user, String pw) {
+    public ServerInfo(String url, String user, String pw, String domain) {
         this.url = url;
         this.user = user;
         this.password = pw;
+        this.domain = domain;
     }
 
     public ServerInfo(ServerInfo si) {
         this.url = si.getUrl();
         this.user = si.getUser();
         this.password = si.getPassword();
+        this.domain = si.getDomain();
     }
 }
