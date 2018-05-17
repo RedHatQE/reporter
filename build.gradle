@@ -62,7 +62,7 @@ dependencies {
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.8.2'
     compile group: 'org.apache.activemq', name: 'activemq-all', version: '5.15.2'
     compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.1'
-    compile 'com.github.redhatqe.polarize:polarize-meta:0.1.0-SNAPSHOT'
+    compile 'com.github.redhatqe.polarize:metadata:0.1.0-SNAPSHOT'
 }
 
 task wrapper(type: Wrapper) {
