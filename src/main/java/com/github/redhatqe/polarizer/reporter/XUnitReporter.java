@@ -11,8 +11,8 @@ import com.github.redhatqe.polarizer.reporter.utils.FileHelper;
 import com.github.redhatqe.polarizer.reporter.utils.Tuple;
 import com.github.redhatqe.polarizer.reporter.importer.xunit.*;
 import com.github.redhatqe.polarizer.reporter.importer.xunit.Error;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 import org.testng.*;
 import org.testng.xml.XmlClass;
 import org.testng.xml.XmlSuite;
@@ -42,7 +42,7 @@ import java.util.stream.Stream;
  * file, this file will be loaded instead.
  */
 public class XUnitReporter implements IReporter {
-    private final static Logger logger = LogManager.getLogger(XUnitReporter.class);
+    private final static Logger logger = LoggerFactory.getLogger(XUnitReporter.class);
     public static String configPath;
     public static File cfgFile = null;
     private static XUnitConfig config;
@@ -599,8 +599,12 @@ public class XUnitReporter implements IReporter {
             Map<String, Map<String, IdParams>> mapping = FileHelper.loadMapping(fpath);
             Map<String, IdParams> inner = mapping.get(qual);
 
-            if (!checkMethInMapping(inner, qual, project, badMethods))
-                continue;
+            if (!checkMethInMapping(inner, qual, project, badMethods)){
+              String warn = String.format("%s does not exist in mapping file for Project %s, skipping it",
+                                          qual, project);
+              logger.warn(warn);
+              continue;
+            }
 
             FullResult fres;
             Testcase testcase = new Testcase();
@@ -635,7 +639,8 @@ public class XUnitReporter implements IReporter {
             com.github.redhatqe.polarizer.reporter.importer.xunit.Properties props =
                     getPropertiesFromMethod(result, args, polarionID);
             testcase.setProperties(props);
-        }
+        };
+        logger.info("returning the method getmethodinfo");
         return full;
     }
 

@@ -5,8 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.redhatqe.polarizer.reporter.configuration.ServerInfo;
 import com.github.redhatqe.polarizer.reporter.configuration.XUnitInfo;
 import com.github.redhatqe.polarizer.reporter.configuration.api.IComplete;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,7 +26,7 @@ public class XUnitConfig extends BaseConfig implements IComplete<String> {
     // 2. Add all fields not belonging to the configuration here
     // ==========================================================================
     @JsonIgnore
-    public static Logger logger = LogManager.getLogger("XUnitConfig");
+    public static Logger logger = LoggerFactory.getLogger("XUnitConfig");
     @JsonIgnore
     private String currentXUnit;
     @JsonIgnore
