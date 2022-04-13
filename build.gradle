@@ -13,38 +13,8 @@ version '0.2.3-SNAPSHOT'
 sourceCompatibility = 1.8
 
 String jacksonVer = "2.9.2"
-
-
-class Creds {
-    public String user
-    public String pw
-
-    Creds(String u, String p) {
-        this.user = u
-        this.pw = p
-    }
-}
-
-def getCreds(String polarizePropertyFile) {
-    File f = new File(polarizePropertyFile)
-    Properties props = new Properties()
-    props.load(f.newDataInputStream())
-    return new Creds(props.getProperty("ossrhUsername"), props.getProperty("ossrhPassword"))
-}
-
-def getCreds(String polarizePropertyFile, String field1, String field2) {
-    File f = new File(polarizePropertyFile)
-    Properties props = new Properties()
-    props.load(f.newDataInputStream())
-    return new Creds(props.getProperty(field1), props.getProperty(field2))
-}
-
-String projectURL = 'https://github.com/rarebreed/reporter'
-String devURL = 'git@github.com:rarebreed/reporter.git'
-String propFile = System.getProperty("user.home") + "/.polarizer/polarizer-project.properties"
-Creds creds = getCreds(propFile)
-Creds creds2 = getCreds(propFile, "bintrayUser", "bintrayPassword")
-
+String projectURL = 'https://github.com/RedHatQE/reporter'
+String devURL = 'git@github.com:RedHatQE/reporter.git'
 
 repositories {
     jcenter()
@@ -69,20 +39,6 @@ task wrapper(type: Wrapper) {
     gradleVersion = '4.4'
 }
 
-// Had to add the -quiet option when creating the javadocs for Java 8, or creation will fail
-// Generates javadocs
-task myJavadocs(type: Javadoc) {
-    source = sourceSets.main.allJava
-    options.addStringOption('Xdoclint:none', '-quiet')
-    classpath += sourceSets.test.compileClasspath
-}
-
-// Generates the javadoc jar
-task javadocJar (type: Jar, dependsOn: myJavadocs) {
-    classifier = 'javadoc'
-    from javadoc.destinationDir
-}
-
 // Generates the polarize jar
 task sourceJar(type: Jar) {
     from sourceSets.main.allJava
@@ -90,37 +46,9 @@ task sourceJar(type: Jar) {
 }
 
 artifacts {
-    archives jar, sourceJar, javadocJar, shadowJar
+    archives jar, sourceJar, pomConfig
 }
 
-
-bintray {
-    user = creds2.user
-    key = creds2.pw
-    override = true
-    publish = true
-    pkg {
-        repo = 'reporter'
-        name = 'reporter'
-        licenses = ['Apache-2.0']
-        vcsUrl = 'https://github.com/rarebreed/reporter.git'
-        version {
-            name = "${version}"
-            desc = 'Data definitions for xunit and testcase for polarize.  TestNG Reporter'
-            released  = new Date()
-            gpg {
-                sign = true //Determines whether to GPG sign the files. The default is false
-            }
-            mavenCentralSync {
-                sync = true //[Default: true] Determines whether to sync the version to Maven Central.
-                user =  "${creds.user}" //OSS user token: mandatory
-                password = "${creds.pw}" //OSS user password: mandatory
-                close = '1' //Optional property. By default the staging repository is closed and artifacts are released to Maven Central. You can optionally turn this behaviour off (by puting 0 as value) and release the version manually.
-            }
-        }
-    }
-    publications = ['MyPublication']
-}
 
 // Create the pom configuration:
 def pomConfig = {
@@ -136,6 +64,12 @@ def pomConfig = {
             name "Sean Toner"
             email "stoner@redhat.com"
         }
+        developer {
+            id "jstavel"
+            name "Jan Stavel"
+            email "jstavel@redhat.com"
+        }
+
     }
 
     scm {
@@ -145,103 +79,103 @@ def pomConfig = {
     }
 }
 
-publishing {
-    publications {
-        MyPublication(MavenPublication) {
-            from components.java
-            artifact sourceJar
-            artifact javadocJar
-            groupId 'com.github.redhatqe.polarizer'
-            artifactId 'reporter'
-            version "${version}"
-            pom.withXml {
-                def root = asNode()
-                root.appendNode('description', 'JAXB classes for xunit and testcases, TestNG reporter')
-                root.appendNode('name', 'reporter')
-                root.appendNode('url', "${projectURL}")
-                root.children().last() + pomConfig
-            }
-        }
-    }
-}
+// publishing {
+//     publications {
+//         MyPublication(MavenPublication) {
+//             from components.java
+//             artifact sourceJar
+//             artifact javadocJar
+//             groupId 'com.github.redhatqe.polarizer'
+//             artifactId 'reporter'
+//             version "${version}"
+//             pom.withXml {
+//                 def root = asNode()
+//                 root.appendNode('description', 'JAXB classes for xunit and testcases, TestNG reporter')
+//                 root.appendNode('name', 'reporter')
+//                 root.appendNode('url', "${projectURL}")
+//                 root.children().last() + pomConfig
+//             }
+//         }
+//     }
+// }
 
-artifactory {
-    contextUrl = "${artifactory_contextUrl}"   //The base Artifactory URL if not overridden by the publisher/resolver
-    publish {
-        repository {
-            repoKey = version.endsWith("SNAPSHOT") ? "oss-snapshot-local" : "oss-release-local"
-            username = "${artifactory_user}"
-            password = "${artifactory_password}"
-            maven = true
-        }
-        defaults {
-            //List of Gradle Configurations (names or objects) from which to collect the list of artifacts to be deployed to Artifactory.
-            // The publications tells what files (artifacts) to upload
-            publications('mavenJava')
+// artifactory {
+//     contextUrl = "${artifactory_contextUrl}"   //The base Artifactory URL if not overridden by the publisher/resolver
+//     publish {
+//         repository {
+//             repoKey = version.endsWith("SNAPSHOT") ? "oss-snapshot-local" : "oss-release-local"
+//             username = "${artifactory_user}"
+//             password = "${artifactory_password}"
+//             maven = true
+//         }
+//         defaults {
+//             //List of Gradle Configurations (names or objects) from which to collect the list of artifacts to be deployed to Artifactory.
+//             // The publications tells what files (artifacts) to upload
+//             publications('mavenJava')
 
-            //properties = ['qa.level': 'basic', 'q.os': 'win32, deb, osx']  //Optional map of properties to attach to all published artifacts
-            /*
-            The properties closure in the "defaults" task uses the following syntax:
-            properties {
-                publicationName 'group:module:version:classifier@type', key1:'value1', key2:'value2', ...
-            }*/
+//             //properties = ['qa.level': 'basic', 'q.os': 'win32, deb, osx']  //Optional map of properties to attach to all published artifacts
+//             /*
+//             The properties closure in the "defaults" task uses the following syntax:
+//             properties {
+//                 publicationName 'group:module:version:classifier@type', key1:'value1', key2:'value2', ...
+//             }*/
 
-            publishBuildInfo = true   //Publish build-info to Artifactory (true by default)
-            publishArtifacts = true   //Publish artifacts to Artifactory (true by default)
-            publishPom = true   //Publish generated POM files to Artifactory (true by default).
-            publishIvy = true   //Publish generated Ivy descriptor files to Artifactory (true by default).
-        }
-    }
-    resolve {
-        repository {
-            repoKey = version.endsWith("SNAPSHOT") ? "libs-snapshot" : "libs-release"
-            username = "${artifactory_user}"
-            password = "${artifactory_password}"
-            maven = true
-        }
-    }
-}
+//             publishBuildInfo = true   //Publish build-info to Artifactory (true by default)
+//             publishArtifacts = true   //Publish artifacts to Artifactory (true by default)
+//             publishPom = true   //Publish generated POM files to Artifactory (true by default).
+//             publishIvy = true   //Publish generated Ivy descriptor files to Artifactory (true by default).
+//         }
+//     }
+//     resolve {
+//         repository {
+//             repoKey = version.endsWith("SNAPSHOT") ? "libs-snapshot" : "libs-release"
+//             username = "${artifactory_user}"
+//             password = "${artifactory_password}"
+//             maven = true
+//         }
+//     }
+// }
 
-uploadArchives {
-  repositories {
-    mavenDeployer {
-      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+// uploadArchives {
+//   repositories {
+//     mavenDeployer {
+//       beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
-      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-        authentication(userName: creds.user, password: creds.pw)
-      }
+//       repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+//         authentication(userName: creds.user, password: creds.pw)
+//       }
 
-      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-        authentication(userName: creds.user, password: creds.pw)
-      }
+//       snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+//         authentication(userName: creds.user, password: creds.pw)
+//       }
 
-      pom.project {
-        name project.name
-        packaging 'jar'
-        description 'Library to help with configuration'
-        url projectURL
+//       pom.project {
+//         name project.name
+//         packaging 'jar'
+//         description 'Library to help with configuration'
+//         url projectURL
 
-        scm {
-          connection "scm:git:${projectURL}.git"
-          developerConnection "scm:git:${devURL}"
-          url projectURL
-        }
+//         scm {
+//           connection "scm:git:${projectURL}.git"
+//           developerConnection "scm:git:${devURL}"
+//           url projectURL
+//         }
 
-        licenses {
-          license {
-            name 'The Apache License, Version 2.0'
-            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-          }
-        }
+//         licenses {
+//           license {
+//             name 'The Apache License, Version 2.0'
+//             url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+//           }
+//         }
 
-        developers {
-          developer {
-            id 'stoner'
-            name 'Sean Toner'
-            email 'stoner@redhat.com'
-          }
-        }
-      }
-    }
-  }
-}
+//         developers {
+//           developer {
+//             id 'stoner'
+//             name 'Sean Toner'
+//             email 'stoner@redhat.com'
+//           }
+//         }
+//       }
+//     }
+//   }
+// }

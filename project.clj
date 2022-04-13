@@ -1,4 +1,4 @@
-(defproject com.github.redhatqe/polarizer-reporter "0.2.0-SNAPSHOT"
+(defproject com.github.redhatqe/polarizer-reporter "0.3.0-SNAPSHOT"
   :description "A small JMS/ActiveMQ helper library for Polarion"
   :url "https://github.com/RedHatQE/reporter"
   :java-source-path "src"
