@@ -35,7 +35,7 @@ import java.util.stream.Stream;
 
 /**
  * Class that handles junit report generation for TestNG
- *
+ * <p>
  * Use this class when running TestNG tests as -reporter XUnitReporter.  It can be
  * configured through the polarize-config.xml file.  A default configuration is contained in the resources folder, but
  * a global environment variable of XUNIT_IMPORTER_CONFIG can also be set.  If this env var exists and it points to a
@@ -74,12 +74,10 @@ public class XUnitReporter implements IReporter {
         if (path != null) {
             cfgFile = new File(path);
             configPath = path;
-        }
-        else if (System.getProperty("polarize.config") != null) {
+        } else if (System.getProperty("polarize.config") != null) {
             configPath = System.getProperty("polarize.config");
             cfgFile = new File(configPath);
-        }
-        else {
+        } else {
             Path phome = Paths.get(System.getProperty("user.home"), ".polarizer", "polarizer-xunit.yml");
             cfgFile = new File(phome.toString());
             configPath = phome.toString();
@@ -93,7 +91,7 @@ public class XUnitReporter implements IReporter {
             FileOutputStream os = null;
             try {
                 os = new FileOutputStream(tmp);
-                int r = 0;
+                int r;
                 byte[] buffer = new byte[1024];
                 while ((r = is.read(buffer)) != -1) {
                     os.write(buffer, 0, r);
@@ -120,8 +118,7 @@ public class XUnitReporter implements IReporter {
                 }
             }
             cfgFile = tmp;
-        }
-        else {
+        } else {
             logger.info(String.format("Using %s for the xunit reporting config file", cfgFile.toString()));
         }
 
@@ -148,16 +145,14 @@ public class XUnitReporter implements IReporter {
                     e.printStackTrace();
                 }
             }
-        }
-        else if (XUnitReporter.defaultPropertyFile.exists()){
+        } else if (XUnitReporter.defaultPropertyFile.exists()) {
             try {
                 FileInputStream fis = new FileInputStream(XUnitReporter.defaultPropertyFile);
                 props.load(fis);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
-        else {
+        } else {
             InputStream is = XUnitReporter.class.getClassLoader().getResourceAsStream("reporter.properties");
             try {
                 props.load(is);
@@ -197,7 +192,7 @@ public class XUnitReporter implements IReporter {
     }
 
     /**
-     * Creates an xunit file compatible with the Polarion xunit importer service
+     * Creates a xunit file compatible with the Polarion xunit importer service
      *
      * @param cfg contains arguments needed to convert xunit to polarion compatible xunit
      * @return a new File that is compatible
@@ -211,12 +206,11 @@ public class XUnitReporter implements IReporter {
         Function<String, IdParams> fn = (qual) -> {
             Map<String, IdParams> m = mapping.get(qual);
             if (m != null) {
-                IdParams param =  m.get(project);
+                IdParams param = m.get(project);
                 if (param == null)
                     throw new MappingError(String.format("Could not find %s -> %s in mapping", qual, project));
                 return param;
-            }
-            else
+            } else
                 throw new MappingError(String.format("Could not find %s in mapping", qual));
         };
 
@@ -251,12 +245,12 @@ public class XUnitReporter implements IReporter {
                 curr.add(prop);
             else {
                 IntStream.range(0, curr.size())
-                    .map(i -> curr.get(i).getName().equals(prop.getName()) ? i : -1)
-                    .filter(x -> x != -1)
-                    .forEach(e -> {
-                        logger.info(String.format("Using mapping.json TestCase ID value of %s", prop.getValue()));
-                        curr.set(e, prop);
-                    });
+                        .map(i -> curr.get(i).getName().equals(prop.getName()) ? i : -1)
+                        .filter(x -> x != -1)
+                        .forEach(e -> {
+                            logger.info(String.format("Using mapping.json TestCase ID value of %s", prop.getValue()));
+                            curr.set(e, prop);
+                        });
             }
         };
 
@@ -271,8 +265,7 @@ public class XUnitReporter implements IReporter {
             suite.getTestcase().forEach(tcHdlr);
             suites.getTestsuite().clear();
             suites.getTestsuite().add(suite);
-        }
-        else {
+        } else {
             suites.getTestsuite()
                     .forEach(ts -> ts.getTestcase().forEach(tcHdlr));
         }
@@ -298,20 +291,20 @@ public class XUnitReporter implements IReporter {
      */
     private static void setProp(List<Property> props, Property prop) {
         props.stream()
-            .map(p -> new Tuple<>(p.getName(), p))
-            .filter(p -> p.first.equals(prop.getName()))
-            .filter(p -> !p.second.getValue().equals(prop.getValue()))
-            .forEach(p -> {
-                String oVal = p.second.getValue();
-                logger.info(String.format("Overwriting original value %s to %s for %s", oVal, prop.getValue(), p.first));
-                p.second.setValue(prop.getValue());
-            });
+                .map(p -> new Tuple<>(p.getName(), p))
+                .filter(p -> p.first.equals(prop.getName()))
+                .filter(p -> !p.second.getValue().equals(prop.getValue()))
+                .forEach(p -> {
+                    String oVal = p.second.getValue();
+                    logger.info(String.format("Overwriting original value %s to %s for %s", oVal, prop.getValue(), p.first));
+                    p.second.setValue(prop.getValue());
+                });
     }
 
     private static void addProp(List<Property> props, Property prop) {
         Boolean matched = props.stream()
-            .map(p -> new Tuple<>(p.getName(), p))
-            .anyMatch(p -> p.first.equals(prop.getName()));
+                .map(p -> new Tuple<>(p.getName(), p))
+                .anyMatch(p -> p.first.equals(prop.getName()));
         if (!matched) {
             logger.info(String.format("Adding %s = %s to Property list", prop.getName(), prop.getValue()));
             props.add(prop);
@@ -324,14 +317,14 @@ public class XUnitReporter implements IReporter {
         XUnitInfo info = cfg.getXunit();
 
         BiFunction<String, Map<String, String>, List<Property>> fn = (s, m) -> m.entrySet().stream()
-            .filter(e -> !propSet.contains(e.getKey()))
-            .map(es -> {
-                Property prop = new Property();
-                prop.setName(s + es.getKey());
-                prop.setValue(es.getValue());
-                return prop;
-            })
-            .collect(Collectors.toList());
+                .filter(e -> !propSet.contains(e.getKey()))
+                .map(es -> {
+                    Property prop = new Property();
+                    prop.setName(s + es.getKey());
+                    prop.setValue(es.getValue());
+                    return prop;
+                })
+                .collect(Collectors.toList());
 
         List<Property> custProps = fn.apply("polarion-custom-", info.getCustom().getProperties());
         // Overwrite existing Properties
@@ -340,13 +333,13 @@ public class XUnitReporter implements IReporter {
         custProps.forEach(cp -> XUnitReporter.addProp(props, cp));
 
         List<Property> tsProps = info.getCustom().getTestSuite().entrySet().stream()
-            .map((Map.Entry<String, Boolean> es) -> {
-                Property prop = new Property();
-                prop.setName("polarion-" + es.getKey());
-                prop.setValue(es.getValue().toString());
-                return prop;
-            })
-            .collect(Collectors.toList());
+                .map((Map.Entry<String, Boolean> es) -> {
+                    Property prop = new Property();
+                    prop.setName("polarion-" + es.getKey());
+                    prop.setValue(es.getValue().toString());
+                    return prop;
+                })
+                .collect(Collectors.toList());
 
         BiFunction<String, Supplier<String>, Property> con = (s, fun) -> {
             Property prop = new Property();
@@ -368,8 +361,8 @@ public class XUnitReporter implements IReporter {
         zip.add(new Tuple<>(XUnitReporter.polarionUserId, () -> cfg.getServers().get("polarion").getUser()));
 
         List<Property> miscProps = zip.stream()
-            .map(t -> con.apply(t.first, t.second))
-            .collect(Collectors.toList());
+                .map(t -> con.apply(t.first, t.second))
+                .collect(Collectors.toList());
 
         miscProps.forEach(mp -> {
             XUnitReporter.setProp(props, mp);
@@ -379,11 +372,11 @@ public class XUnitReporter implements IReporter {
 
     /**
      * Generates a modified xunit result that can be used for the XUnit Importer
-     *
+     * <p>
      * Example of a modified junit file:
      *
-     * @param xmlSuites passed by TestNG
-     * @param suites passed by TestNG
+     * @param xmlSuites       passed by TestNG
+     * @param suites          passed by TestNG
      * @param outputDirectory passed by TestNG.  configurable?
      */
     @Override
@@ -455,8 +448,7 @@ public class XUnitReporter implements IReporter {
                         if (fr == null) {
                             //System.out.println(String.format("Skipping test for %s", ctx.toString()));
                             return null;  // No FullResult due to empty frList.  Will be filtered out
-                        }
-                        else
+                        } else
                             return ts;
                     })
                     .filter(Objects::nonNull)  // filter out any suites without FullResult
@@ -467,8 +459,8 @@ public class XUnitReporter implements IReporter {
 
         // Now that we've gone through the suites, let's marshall this into an XML file for the XUnit Importer
         FullResult suiteResults = getSuiteResults(tsuites);
-        System.out.println(String.format("Error: %d, Failures: %d, Success: %d, Skips: %d", suiteResults.errors,
-                suiteResults.fails, suiteResults.passes, suiteResults.skips));
+        System.out.printf("Error: %d, Failures: %d, Success: %d, Skips: %d%n", suiteResults.errors,
+                suiteResults.fails, suiteResults.passes, suiteResults.skips);
         File reportPath = new File(outputDirectory + "/testng-polarion.xml");
         JAXBHelper jaxb = new JAXBHelper();
         IJAXBHelper.marshaller(tsuites, reportPath, jaxb.getXSDFromResource(Testsuites.class));
@@ -476,7 +468,7 @@ public class XUnitReporter implements IReporter {
 
     /**
      * Sets the status for a Testcase object given values from ITestResult
-     * 
+     *
      * @param result
      * @param tc
      */
@@ -485,7 +477,7 @@ public class XUnitReporter implements IReporter {
         int status = result.getStatus();
         StringBuilder sb = new StringBuilder();
         fr.total++;
-        switch(status) {
+        switch (status) {
             // Unfortunately, TestNG doesn't distinguish between an assertion failure and an error.  The way to check
             // is if getThrowable() returns non-null
             case ITestResult.FAILURE:
@@ -498,14 +490,12 @@ public class XUnitReporter implements IReporter {
                     if (maybe != null) {
                         String msg = t.getMessage().length() > 128 ? t.getMessage().substring(128) : t.getMessage();
                         err.setMessage(msg);
-                    }
-                    else
+                    } else
                         err.setMessage("java.lang.NullPointerException");
                     Arrays.stream(t.getStackTrace()).forEach(st -> sb.append(st.toString()).append("\n"));
                     err.setContent(sb.toString());
                     tc.getError().add(err);
-                }
-                else {
+                } else {
                     fr.fails++;
                     Failure fail = new Failure();
                     if (t != null)
@@ -519,7 +509,6 @@ public class XUnitReporter implements IReporter {
                 break;
             case ITestResult.SUCCESS:
                 fr.passes++;
-                tc.setStatus("success");
                 break;
             default:
                 if (t != null) {
@@ -576,7 +565,7 @@ public class XUnitReporter implements IReporter {
     getMethodInfo(ISuite suite, File badMethods) {
         List<IInvokedMethod> invoked = suite.getAllInvokedMethods();
         Map<String, Tuple<FullResult, List<Testcase>>> full = new HashMap<>();
-        for(IInvokedMethod meth: invoked) {
+        for (IInvokedMethod meth : invoked) {
             ITestNGMethod fn = meth.getTestMethod();
             if (!fn.isTest()) {
                 continue;
@@ -599,11 +588,11 @@ public class XUnitReporter implements IReporter {
             Map<String, Map<String, IdParams>> mapping = FileHelper.loadMapping(fpath);
             Map<String, IdParams> inner = mapping.get(qual);
 
-            if (!checkMethInMapping(inner, qual, project, badMethods)){
-              String warn = String.format("%s does not exist in mapping file for Project %s, skipping it",
-                                          qual, project);
-              logger.warn(warn);
-              continue;
+            if (!checkMethInMapping(inner, qual, project, badMethods)) {
+                String warn = String.format("%s does not exist in mapping file for Project %s, skipping it",
+                        qual, project);
+                logger.warn(warn);
+                continue;
             }
 
             FullResult fres;
@@ -614,8 +603,7 @@ public class XUnitReporter implements IReporter {
                 tests = new ArrayList<>();
                 tests.add(testcase);
                 full.put(classname, new Tuple<>(fres, tests));
-            }
-            else {
+            } else {
                 Tuple<FullResult, List<Testcase>> tup = full.get(classname);
                 fres = tup.first;
                 tests = tup.second;
@@ -639,7 +627,7 @@ public class XUnitReporter implements IReporter {
             com.github.redhatqe.polarizer.reporter.importer.xunit.Properties props =
                     getPropertiesFromMethod(result, args, polarionID);
             testcase.setProperties(props);
-        };
+        }
         logger.info("returning the method getmethodinfo");
         return full;
     }
@@ -648,7 +636,7 @@ public class XUnitReporter implements IReporter {
      * Takes the parameter info from the mapping.json file for the TestCase ID, and generates the Properties for it
      *
      * @param result
-     * @param args The list of args obtained from mapping.json for the matching polarionID
+     * @param args       The list of args obtained from mapping.json for the matching polarionID
      * @param polarionID The matching Property of a Polarion ID for a TestCase
      * @return
      */
@@ -669,7 +657,7 @@ public class XUnitReporter implements IReporter {
             logger.error(err);
             throw new MappingError(err);
         }
-        for(int x = 0; x < params.length; x++) {
+        for (int x = 0; x < params.length; x++) {
             Property param = new Property();
             param.setName("polarion-parameter-" + args.get(x));
             String p;
@@ -715,7 +703,7 @@ public class XUnitReporter implements IReporter {
         properties.add(includeSkipped);
 
         Configurator cfg = XUnitReporter.createConditionalProperty(XUnitReporter.polarionResponse, responseName,
-                                                                   properties);
+                properties);
         cfg.set();
         cfg = XUnitReporter.createConditionalProperty(XUnitReporter.polarionCustom, null, properties);
         cfg.set();
@@ -732,10 +720,10 @@ public class XUnitReporter implements IReporter {
 
     /**
      * Simple setter for a Property
-     *
+     * <p>
      * TODO: replace this with a lambda
      *
-     * @param name key
+     * @param name  key
      * @param value value of the key
      * @return Property with the given name and value
      */
@@ -754,8 +742,8 @@ public class XUnitReporter implements IReporter {
     /**
      * Creates a Configurator functional interface useful to set properties for the XUnit importer
      *
-     * @param name element name
-     * @param value value for the element (might be attribute depending on XML element)
+     * @param name       element name
+     * @param value      value for the element (might be attribute depending on XML element)
      * @param properties list of Property
      * @return The Configurator that can be used to set the given name and value
      */
@@ -764,11 +752,11 @@ public class XUnitReporter implements IReporter {
         Property prop = new Property();
         prop.setName(name);
 
-        switch(name) {
+        switch (name) {
             case XUnitReporter.testrunType:
                 cfg = () -> {
                     String trTypeId = config.getXunit().getTestrun().getType();
-                    if (trTypeId.equals(""))
+                    if (trTypeId.isEmpty())
                         return;
                     prop.setValue(trTypeId);
                     properties.add(prop);
@@ -777,7 +765,7 @@ public class XUnitReporter implements IReporter {
             case XUnitReporter.templateId:
                 cfg = () -> {
                     String tempId = config.getXunit().getTestrun().getTemplateId();
-                    if (tempId.equals(""))
+                    if (tempId.isEmpty())
                         return;
                     prop.setValue(tempId);
                     properties.add(prop);
@@ -786,7 +774,7 @@ public class XUnitReporter implements IReporter {
             case XUnitReporter.testrunTitle:
                 cfg = () -> {
                     String trTitle = config.getXunit().getTestrun().getTitle();
-                    if (trTitle.equals(""))
+                    if (trTitle.isEmpty())
                         return;
                     prop.setValue(trTitle);
                     properties.add(prop);
@@ -795,7 +783,7 @@ public class XUnitReporter implements IReporter {
             case XUnitReporter.testrunId:
                 cfg = () -> {
                     String trId = config.getXunit().getTestrun().getId();
-                    if (trId.equals(""))
+                    if (trId.isEmpty())
                         return;
                     prop.setValue(trId);
                     properties.add(prop);
@@ -804,7 +792,7 @@ public class XUnitReporter implements IReporter {
             case XUnitReporter.polarionResponse:
                 cfg = () -> {
                     String selVal = config.getXunit().getSelector().getValue();
-                    if (selVal.equals(""))
+                    if (selVal.isEmpty())
                         return;
                     prop.setName(XUnitReporter.polarionResponse + "-" + value);
                     prop.setValue(selVal);
@@ -819,7 +807,7 @@ public class XUnitReporter implements IReporter {
                     customFields.entrySet().forEach(entry -> {
                         String key = XUnitReporter.polarionCustom + "-" + entry.getKey();
                         String val = entry.getValue();
-                        if (!val.equals("")) {
+                        if (!val.isEmpty()) {
                             Property p = new Property();
                             p.setName(key);
                             p.setValue(val);
