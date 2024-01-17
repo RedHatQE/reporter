@@ -1,6 +1,11 @@
 (defproject com.github.redhatqe/polarizer-reporter "0.4.0-SNAPSHOT"
   :description "A small JMS/ActiveMQ helper library for Polarion"
   :url "https://github.com/RedHatQE/reporter"
+  :license {:name "GPL-3.0"
+            :comment "GNU General Public License v3.0"
+            :url "https://choosealicense.com/licenses/gpl-3.0"
+            :year 2024
+            :key "gpl-3.0"}
   :java-source-path "src"
   :java-source-paths ["src"]
   :dependencies [
@@ -20,4 +25,5 @@
                  ]
 
   :javac-options {:debug "on"}
-  :plugins [[lein2-eclipse "2.0.0"]])
+  :plugins [[lein2-eclipse "2.0.0"]]
+  :repositories [["releases" {:url "https://repo.clojars.org" :creds :gpg}]])
