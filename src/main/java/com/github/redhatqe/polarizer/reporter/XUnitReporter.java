@@ -659,7 +659,7 @@ public class XUnitReporter implements IReporter {
         }
         for (int x = 0; x < params.length; x++) {
             Property param = new Property();
-            param.setName("polarion-parameter-" + args.get(x));
+            param.setName(args.get(x));
             String p;
             if (params[x] == null)
                 p = "null";

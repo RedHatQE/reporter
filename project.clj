@@ -24,6 +24,7 @@
                  ;;[jakarta.xml.bind/jakarta.xml.bind-api "3.0.1"]
                  ]
 
-  :javac-options {:debug "on"}
+  ;:javac-options {:debug "on"}
+  :javac-options ["-target" "11" "-source" "11" "-parameters"]
   :plugins [[lein2-eclipse "2.0.0"]]
   :repositories [["releases" {:url "https://repo.clojars.org" :creds :gpg}]])
